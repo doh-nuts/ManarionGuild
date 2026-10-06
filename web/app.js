@@ -1,0 +1,71 @@
+import { series, timestamp } from './model.js';
+const $ = id => document.getElementById(id);
+const colors = ['#74e3bf','#a7a0ff','#efbf70','#6bb9f5','#f48da7','#cfdd80','#c394e8','#74d9e2'];
+const compact = n => new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 2 }).format(n);
+const full = n => new Intl.NumberFormat('en', { maximumFractionDigits: 2 }).format(n);
+const svgNS = 'http://www.w3.org/2000/svg';
+function svg(tag, attrs, text) { const node = document.createElementNS(svgNS, tag); for (const [k,v] of Object.entries(attrs)) node.setAttribute(k,v); if (text !== undefined) node.textContent = text; return node; }
+try {
+  const response = await fetch('data.json');
+  if (!response.ok) throw new Error('History unavailable');
+  const { snapshots, resources } = await response.json();
+  const latest = snapshots.at(-1), names = new Map();
+  for (const s of snapshots) for (const [id, m] of Object.entries(s.members)) names.set(id, m.name);
+  const ids = [...names.keys()].sort((a,b) => names.get(a).localeCompare(names.get(b)));
+  const selected = new Set(ids.filter(id => latest.members[id]).sort((a,b) => (latest.members[b].contributions['1'] || 0) - (latest.members[a].contributions['1'] || 0)).slice(0,5));
+  let mode = 'cumulative';
+  $('guild-info').textContent = `${latest.name} · ${snapshots[0].time.slice(0,10)} — ${latest.time.slice(0,10)}`;
+  $('updated').textContent = latest.time.replace('T',' · ');
+  for (const [id,value] of Object.entries({ snapshots: snapshots.length, members: Object.keys(latest.members).length, level: latest.level, dungeon: latest.dungeon })) $(id).textContent = full(value);
+  const resourceIds = new Set(snapshots.flatMap(s => Object.values(s.members).flatMap(m => Object.keys(m.contributions))));
+  for (const id of [...resourceIds].sort((a,b) => Number(a)-Number(b))) { const option = document.createElement('option'); option.value=id; option.textContent=resources[id] || `Resource ${id}`; $('resource').append(option); }
+  $('from').value = snapshots[0].time.slice(0,10); $('to').value = latest.time.slice(0,10);
+  for (const id of ['from','to']) { $(id).min = snapshots[0].time.slice(0,10); $(id).max = latest.time.slice(0,10); }
+  function members() {
+    $('member-list').replaceChildren();
+    for (const [index,id] of ids.entries()) {
+      if (!names.get(id).toLowerCase().includes($('search').value.toLowerCase())) continue;
+      const label = document.createElement('label'); label.className='member';
+      const input = document.createElement('input'); input.type='checkbox'; input.checked=selected.has(id); input.addEventListener('change', () => { input.checked ? selected.add(id) : selected.delete(id); render(); });
+      const swatch=document.createElement('span'); swatch.className='swatch'; swatch.style.background=colors[index%colors.length];
+      const name=document.createElement('span'); name.textContent=names.get(id); label.append(input,swatch,name);
+      if (!latest.members[id]) { const old=document.createElement('small'); old.textContent='Former'; label.append(old); }
+      $('member-list').append(label);
+    }
+  }
+  function render() {
+    $('selected-count').textContent=`${selected.size} selected`;
+    $('cumulative').setAttribute('aria-pressed', mode==='cumulative'); $('daily').setAttribute('aria-pressed',mode==='daily');
+    const resource=$('resource').value, label=resources[resource] || `Resource ${resource}`;
+    $('chart-title').textContent=label; $('unit').textContent=mode==='daily' ? 'Average contribution / day' : 'Lifetime contribution total';
+    $('value-label').textContent=mode==='daily' ? 'Latest per day' : 'Latest cumulative';
+    $('method').textContent=mode==='daily' ? 'Per day = change between consecutive snapshots ÷ elapsed days. Gaps are interval averages, not exact daily activity. A missing member or a counter decrease breaks the line.' : 'Cumulative shows the lifetime totals recorded by the API. Missing members break the line. The table uses the latest available observation in this range.';
+    const indices=snapshots.map((s,i)=>i).filter(i => snapshots[i].time.slice(0,10)>=$('from').value && snapshots[i].time.slice(0,10)<=$('to').value);
+    const lines=[...selected].map(id=>({ id, color:colors[ids.indexOf(id)%colors.length], values:series(snapshots,id,resource,mode) }));
+    $('chart').replaceChildren(); $('ranking').replaceChildren();
+    const values=lines.flatMap(l=>indices.map(i=>l.values[i])).filter(v=>v!==null && Number.isFinite(v));
+    if (!indices.length || !values.length) { const p=document.createElement('p'); p.className='empty'; p.textContent=!indices.length ? 'No snapshots in this date range.' : 'Select members with observations to compare contributions.'; $('chart').append(p); return; }
+    const width=960, height=360, left=76, right=24, top=24, bottom=50;
+    const first=timestamp(snapshots[indices[0]]), last=timestamp(snapshots[indices.at(-1)]), max=Math.max(...values,1)*1.08;
+    const x=i=>left+(timestamp(snapshots[i])-first)/(last-first || 1)*(width-left-right), y=v=>height-bottom-v/max*(height-top-bottom);
+    const chart=svg('svg',{viewBox:`0 0 ${width} ${height}`,role:'img','aria-label':`${label} ${mode} history for ${selected.size} selected members`});
+    for (let tick=0;tick<=4;tick++) { const v=max*tick/4; chart.append(svg('line',{x1:left,x2:width-right,y1:y(v),y2:y(v),stroke:'#293441','stroke-dasharray':'3 5'}),svg('text',{x:left-12,y:y(v)+4,'text-anchor':'end',fill:'#92a1b3','font-size':12},compact(v))); }
+    for (const i of [...new Set([indices[0],indices[Math.floor((indices.length-1)/2)],indices.at(-1)])]) chart.append(svg('text',{x:x(i),y:height-15,'text-anchor':i===indices[0]?'start':i===indices.at(-1)?'end':'middle',fill:'#92a1b3','font-size':12},snapshots[i].time.slice(0,10)));
+    for (const line of lines) {
+      let path='', open=false;
+      for (const i of indices) { const value=line.values[i]; if(value===null || !Number.isFinite(value)) { open=false; continue; } path+=`${open?'L':'M'}${x(i)},${y(value)} `; open=true; }
+      chart.append(svg('path',{d:path,stroke:line.color,'stroke-width':2.5,fill:'none','stroke-linejoin':'round'}));
+      for (const i of indices) if (line.values[i]!==null && Number.isFinite(line.values[i])) { const point=svg('circle',{cx:x(i),cy:y(line.values[i]),r:3,fill:line.color,tabindex:0}); point.append(svg('title',{},`${names.get(line.id)} · ${snapshots[i].time.replace('T',' ')} · ${full(line.values[i])}${mode==='daily'?' / day':''}`)); chart.append(point); }
+    }
+    $('chart').append(chart);
+    const rows=lines.map(l=>({ ...l, i:indices.findLast(i=>l.values[i]!==null) })).sort((a,b)=>(b.values[b.i] ?? -1)-(a.values[a.i] ?? -1));
+    for (const row of rows) { const tr=document.createElement('tr'), name=document.createElement('td'), value=document.createElement('td'), date=document.createElement('td'); name.textContent=names.get(row.id); name.style.color=row.color; value.textContent=row.i===undefined?'—':full(row.values[row.i]); date.textContent=row.i===undefined?'No observation':snapshots[row.i].time.replace('T',' '); tr.append(name,value,date); $('ranking').append(tr); }
+  }
+  $('search').addEventListener('input',members);
+  $('all').onclick=()=>{ ids.forEach(id=>selected.add(id)); members(); render(); };
+  $('none').onclick=()=>{ selected.clear(); members(); render(); };
+  $('cumulative').onclick=()=>{mode='cumulative';render();}; $('daily').onclick=()=>{mode='daily';render();};
+  for(const id of ['resource','from','to']) $(id).addEventListener('change',render);
+  $('reset').onclick=()=>{$('from').value=snapshots[0].time.slice(0,10);$('to').value=latest.time.slice(0,10);render();};
+  members(); render();
+} catch { $('error').hidden=false; $('error').textContent='Could not load guild history. Build the website and serve it over HTTP, then reload.'; $('guild-info').textContent='History unavailable'; }

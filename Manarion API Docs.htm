@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8"><title>Manarion API Docs</title></head>
+<body>
+<h1>Documentation</h1>
+<h2>Endpoints</h2>
+<ul>
+  <li><code>GET https://api.manarion.com/players/{id|name}</code> – Fetches public player profile info.</li>
+  <li><code>GET https://api.manarion.com/guilds?gameMode=0</code> – Fetches the list of all guilds.</li>
+  <li><code>GET https://api.manarion.com/guilds/{id}?apikey=</code> – Fetches guild details. The API key is visible to the guild leader on the guild info page.</li>
+  <li><code>GET https://api.manarion.com/leaderboards/{type}?page=1&amp;gameMode=0</code> – Fetches a leaderboard page. Optional guild={id} parameter</li>
+  <li><code>GET https://api.manarion.com/market</code> – Fetches market prices</li>
+</ul>
+<p>Below you can find the meaning of the enum constants you will encounter</p>
+<h3>Leaderboard Types</h3>
+<pre>  battle
+  mining
+  fishing
+  woodcutting
+  total_level
+  pet_levels
+  pet_expeditions
+  base_stats
+  highest_enemy
+  total_actions
+  battle_quests
+  gather_quests
+  farm
+  boost_hedge_fund
+  event_points
+  enchant_inferno
+  enchant_tidal_wrath
+  enchant_wildheart
+  enchant_fire_resistance
+  enchant_water_resistance
+  enchant_nature_resistance
+  enchant_insight
+  enchant_bountiful_harvest
+  enchant_prosperity
+  enchant_fortune
+  enchant_growth
+  enchant_vitality
+  boost_base_spellpower
+  boost_base_ward
+  boost_mining
+  boost_fishing
+  boost_woodcutting
+  boost_damage
+  boost_multicast
+  boost_crit_chance
+  boost_crit_damage
+  boost_haste
+  boost_health
+  boost_ward
+  boost_focus
+  boost_mana
+  boost_overload
+  boost_time_dilation
+  boost_base_res
+  boost_potion
+  boost_mana_shield
+  highest_mastery
+  highest_damage_spell_rank
+  highest_resistance_spell_rank
+  highest_tome_drop_boost
+  highest_gathering_xp_boost
+  kills_per_death
+  deaths
+  dungeon_completed
+  dungeon_treasures
+  dungeon_rooms
+  dungeon_manual
+  dungeon_guild_objectives
+  dungeon_event_objectives
+  dungeon_event_actions
+  dungeon_speedrun_small
+  dungeon_speedrun_medium
+  dungeon_speedrun_large
+  dungeon_speedrun_full_small
+  dungeon_speedrun_full_medium
+  dungeon_speedrun_full_large
+  MT_TOTAL_DUST_INVESTED
+  MT_BUILD_SPEED
+  MT_BUILD_QUEUE
+  MT_EQUIP_BOOST
+  MT_STAT_INTELLECT
+  MT_STAT_STAMINA
+  MT_STAT_FOCUS
+  MT_STAT_SPIRIT
+  MT_STAT_MANA
+  MT_EXPEDITION_HALL
+  MT_MENAGERIE
+  MT_LABORATORY
+  MT_MANA_DUST
+</pre>
+<h3>Guild Upgrade IDs</h3>
+<pre>  COUNCIL_CHAMBER = 1
+  CLOAKROOM = 2
+  NEXUS_CRYSTAL = 3
+  MAGICAL_ACCOUNTING = 4
+  MANA_CONDUIT = 5
+  STUDY = 6
+  SLEEPING_QUARTERS = 7
+  ETHEREAL_REFINERY = 8
+  DUNGEON_DIFFICULTY = 9
+</pre>
+<h3>Boost IDs</h3>
+<pre>  BASE_SPELLPOWER = 1
+  BASE_WARD = 2
+
+  STAT_INTELLECT = 3
+  STAT_STAMINA = 4
+  STAT_FOCUS = 5
+  STAT_SPIRIT = 6
+  STAT_MANA = 7
+
+  SPELLPOWER_VALUE = 8
+  WARD_VALUE = 9
+
+  FIRE_MASTERY = 10
+  WATER_MASTERY = 11
+  NATURE_MASTERY = 12
+
+  FIRE_SPELL_RANK = 21
+  WATER_SPELL_RANK = 22
+  NATURE_SPELL_RANK = 23
+  MANA_SHIELD_RANK = 24
+  FIRE_TOME_DROP_AMOUNT = 25
+  WATER_TOME_DROP_AMOUNT = 26
+  NATURE_TOME_DROP_AMOUNT = 27
+
+  MINING = 30
+  FISHING = 31
+  WOODCUTTING = 32
+  MINING_XP = 33
+  FISHING_XP = 34
+  WOODCUTTING_XP = 35
+
+  DAMAGE = 40
+  MULTICAST = 41
+  CRIT_CHANCE = 42
+  CRIT_DAMAGE = 43
+  HASTE = 44
+  HEALTH = 45
+  WARD = 46
+  FOCUS = 47
+  MANA = 48
+  OVERLOAD = 49
+  TIME_DILATION = 50
+  OVERFLOW = 51  
+
+  ENCHANT_INFERNO_RANK = 60
+  ENCHANT_TIDAL_WRATH_RANK = 61
+  ENCHANT_WILDHEART_RANK = 62
+  ENCHANT_FIRE_RESISTANCE_RANK = 63
+  ENCHANT_WATER_RESISTANCE_RANK = 64
+  ENCHANT_NATURE_RESISTANCE_RANK = 65
+  ENCHANT_INSIGHT_RANK = 66
+  ENCHANT_BOUNTIFUL_HARVEST_RANK = 67
+  ENCHANT_PROSPERITY_RANK = 68
+  ENCHANT_FORTUNE_RANK = 69
+  ENCHANT_GROWTH_RANK = 70
+  ENCHANT_VITALITY_RANK = 71
+
+  INFERNO_VALUE = 80
+  TIDAL_WRATH_VALUE = 81
+  WILDHEART_VALUE = 82
+  FIRE_RESISTANCE_VALUE = 83
+  WATER_RESISTANCE_VALUE = 84
+  NATURE_RESISTANCE_VALUE = 85
+  VITALITY_VALUE = 86
+
+  BASE_EXPERIENCE = 100
+  BASE_MANA_DUST = 101
+  DROP_BOOST = 102
+  MULTISTAT = 103
+  CONSTRUCTION = 104
+  ACTIONS = 105
+  BASE_RESOURCE = 106
+  QUEST_BOOST = 107
+  POTION_BOOST = 108
+  ASCENSION = 109
+  POTION_DURATION = 110
+  JEWELCRAFTING_SKILL = 111
+  EQUIPMENT_DROP = 112
+  GEM_DROP = 113
+  PET_BONUS_XP = 114
+  MAGICAL_ACCOUNTING = 115
+  EXPEDITION_RARITY = 116
+
+  BATTLE_EXPERIENCE_BOOST = 120
+  MANA_DUST_BOOST = 121
+  ELEMENTAL_SHARD_BOOST = 122
+  STAT_DROP = 123
+  BASE_RESOURCE_AMOUNT = 124
+
+  FARM_HARVEST_GOLEM = 130
+  FARM_FERTILIZER = 131
+  FARM_PLOTS = 132
+  POTION_BELT = 133
+  HEDGE_FUND = 134
+
+  DUNGEON_UNLOCKED = 140
+  DUNGEON_IDLE = 141
+  DUNGEON_QUEUE = 142
+  DUNGEON_MOVEMENT = 143
+  DUNGEON_VIEW = 144
+  DUNGEON_TREASURE = 145
+  DUNGEON_AUTO_LOOT = 146
+
+  MT_BUILD_SPEED = 150
+  MT_BUILD_QUEUE = 151
+  MT_EQUIP_BOOST = 152
+  MT_STAT_INTELLECT = 153
+  MT_STAT_STAMINA = 154
+  MT_STAT_FOCUS = 155
+  MT_STAT_SPIRIT = 156
+  MT_STAT_MANA = 157
+  MT_EXPEDITION_HALL = 158
+  MT_MENAGERIE = 159
+  MT_LABORATORY = 160
+  MT_MANA_DUST = 161
+  MT_JEWELCRAFTING = 162
+
+  GEM_POWER_RUBY = 170
+  GEM_POWER_SAPPHIRE = 171
+  GEM_POWER_EMERALD = 172
+  GEM_POWER_DIAMOND = 173
+  GEM_POWER_GARNET = 174
+  GEM_POWER_AQUAMARINE = 175
+  GEM_POWER_JADE = 176
+  GEM_POWER_CITRINE = 177
+  GEM_POWER_TOPAZ = 178
+  GEM_POWER_AMETHYST = 179
+  GEM_POWER_ONYX = 180
+  GEM_POWER_TURQUOISE = 181
+  GEM_POWER_PERIDOT = 182
+  GEM_POWER_TANZANITE = 183
+  GEM_POWER_TOURMALINE = 184
+</pre>
+<h3>Item Slot IDs</h3>
+<pre>  WEAPON = 1
+  ROBE = 2
+  BOOTS = 3
+  GLOVES = 4
+  HAT = 5
+  CLOAK = 6
+  AMULET = 7
+  RING = 8
+</pre>
+<h3>Item Rarity IDs</h3>
+<pre>  COMMON = 1
+  UNCOMMON = 2
+  RARE = 3
+  EPIC = 4
+  LEGENDARY = 5
+  HEIRLOOM = 6
+  MYTHIC = 7
+</pre>
+<h3>Item Prefix IDs</h3>
+<pre>  NONE = 0
+  RECKLESS = 1
+  METHODICAL = 2
+  RAGING = 3
+  RELENTLESS = 4
+  RENEWING = 5
+  PIERCING = 6
+  PERCEPTIVE = 7
+  ATTUNED = 8
+  SHINING = 9
+  IMBUED = 10
+  SPECIALIZED = 11
+  AMBITIOUS = 12
+  ASPIRING = 13
+  COOPERATIVE = 14
+</pre>
+<h3>Loot IDs</h3>
+<pre>  MANA_DUST = 1
+  ELEMENTAL_SHARDS = 2
+  CODEX = 3
+  FIRE_ESSENCE = 4
+  WATER_ESSENCE = 5
+  NATURE_ESSENCE = 6
+  FISH = 7
+  WOOD = 8
+  IRON = 9
+  ASBESTOS = 10
+  IRONBARK = 11
+  FISH_SCALES = 12
+  TOME_OF_FIRE = 13
+  TOME_OF_WATER = 14
+  TOME_OF_NATURE = 15
+  TOME_OF_MANA_SHIELD = 16
+  ENCHANT_FIRE_RESISTANCE = 17
+  ENCHANT_WATER_RESISTANCE = 18
+  ENCHANT_NATURE_RESISTANCE = 19
+  ENCHANT_INFERNO = 20
+  ENCHANT_TIDAL_WRATH = 21
+  ENCHANT_WILDHEART = 22
+  ENCHANT_INSIGHT = 23
+  ENCHANT_BOUNTIFUL_HARVEST = 24
+  ENCHANT_PROSPERITY = 25
+  ENCHANT_FORTUNE = 26
+  ENCHANT_GROWTH = 27
+  ENCHANT_VITALITY = 28
+  REAGENT_ELDERWOOD = 29
+  REAGENT_LODESTONE = 30
+  REAGENT_WHITE_PEARL = 31
+  REAGENT_FOUR_LEAF_CLOVER = 32
+  REAGENT_ENCHANTED_DROPLET = 33
+  REAGENT_INFERNAL_HEART = 34
+  ORB_OF_POWER = 35
+  ORB_OF_CHAOS = 36
+  ORB_OF_DIVINITY = 37
+  BOUND_CODEX = 38
+  SUNPETAL = 39
+  SAGEROOT = 40
+  BLOOMWELL = 41
+  GUILD_BATTLE_XP = 42
+  EVENT_POINTS = 43
+  CRYSTALLIZED_MANA = 44
+  ORB_OF_LEGACY = 45
+  ELEMENTIUM = 46
+  DIVINE_ESSENCE = 47
+  DUNGEON_POINTS = 48
+  EGG = 49
+  ORB_OF_PERFECTION = 50
+  BOUND_ELEMENTAL_SHARDS = 51
+  UNCUT_RUBY = 52
+  UNCUT_SAPPHIRE = 53
+  UNCUT_EMERALD = 54
+  UNCUT_DIAMOND = 55
+  UNCUT_GARNET = 56
+  UNCUT_AQUAMARINE = 57
+  UNCUT_JADE = 58
+  UNCUT_CITRINE = 59
+  UNCUT_TOPAZ = 60
+  UNCUT_AMETHYST = 61
+  UNCUT_ONYX = 62
+  UNCUT_TURQUOISE = 63
+  UNCUT_PERIDOT = 64
+  UNCUT_TANZANITE = 65
+  UNCUT_TOURMALINE = 66
+</pre>
+<h3>Pet IDs</h3>
+<pre>  RESURRECT = 1 
+  RESISTANCE = 2 
+  IMMUNITY = 3 
+  DAMAGE = 4 
+  CURSE = 5 
+  POISON = 6 
+  FOCUS = 7 
+  WARD = 8 
+  HASTE = 9 
+  REGENERATION = 10
+  MANA_DUST = 11
+  EGG_DROP = 12
+  COLONY = 13
+  MINING = 14
+  FISHING = 15
+  WOODCUTTING = 16
+  PET_BONUS_XP = 17
+  MULTISTAT = 18
+  DUNGEON_IDLE = 19
+  VERSATILITY = 20
+  FORAGING = 21
+  DROP = 22
+  GROUP_DUNGEON = 23
+  CONSTRUCTION = 24
+</pre>
+<h3>Game Modes</h3>
+<pre>  NORMAL = 0
+  SOLO_IRONMAN = 1
+</pre>
+
+
+<div id="manarion-helper-button" style="position: fixed; top: 50%; right: 20px; transform: translateY(-50%); width: 80px; height: 80px; background: linear-gradient(135deg, rgb(102, 126, 234) 0%, rgb(118, 75, 162) 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: move; box-shadow: rgba(0, 0, 0, 0.3) 0px 8px 25px; z-index: 999999; transition: 0.3s; border: 4px solid rgba(255, 255, 255, 0.2); user-select: none; touch-action: none;">
+            <svg width="40" height="40" fill="white" viewBox="0 0 24 24">
+                <path d="M19 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.11 0 2-.9 2-2V5c0-1.1-.89-2-2-2zm-9 14l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"></path>
+            </svg>
+        </div></body></html>

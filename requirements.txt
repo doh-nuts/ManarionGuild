@@ -1,0 +1,9 @@
+
+Create a website that can plot guild member contributions over time. Include a toggle for cumulative vs Per/day.
+
+The data folder has existing records for guild data. The filenames have a date and time. The file contents have json data to use for guild information at that time.
+Manarion API Docs.htm has name/index information. When presenting names to the user make sure it's readable. For example "MANA_DUST" would instead be "Mana Dust"
+
+Include a script for getting new guild data using the API: https://api.manarion.com/guilds/11?apikey=9b09b04d-3712-4f8a-a0e5-a0be89f9da76
+Also include a github actions script that can run the API script every day.
+

@@ -1,0 +1,8 @@
+
+Create a website that can plot guild member contributions over time.
+User Options:
+Resource: Mana Dust, 
+
+The data folder has existing records for guild data.
+Manarion API Docs.htm has name/index information. When presenting names to the user make sure it's readable. For example "MANA_DUST" would instead be "Mana Dust"
+
