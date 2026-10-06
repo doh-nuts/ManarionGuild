@@ -25,7 +25,13 @@ The script requests guild 11, validates the response, and saves a new timestampe
 
 ## Daily GitHub Actions collection
 
-Push this project to a GitHub repository, then add an Actions repository secret named `MANARION_API_KEY` with your guild API key. The included `.github/workflows/daily-guild-data.yml` runs at 04:15 UTC each day (9:15 PM Pacific daylight time / 8:15 PM Pacific standard time on the previous calendar day) and supports manual runs. It validates the website and commits new records to the default branch. Allow Actions to write repository contents; branch protections must permit the bot's push. The workflow collects records; it does not deploy the website. Scheduled runs may be delayed by GitHub.
+Push this project to a GitHub repository, then add an Actions repository secret named `MANARION_API_KEY` with your guild API key. The included `.github/workflows/daily-guild-data.yml` runs at 04:15 UTC each day (9:15 PM Pacific daylight time / 8:15 PM Pacific standard time on the previous calendar day) and supports manual runs on the default branch. It validates and builds the website, commits new records, and deploys the refreshed `dist/` to GitHub Pages directly. Allow Actions to write repository contents; branch protections must permit the bot's push. Scheduled runs may be delayed by GitHub.
+
+## GitHub Pages deployment
+
+Set **Settings → Pages → Build and deployment → Source** to **GitHub Actions**. `.github/workflows/static.yml` tests, builds, and publishes only `dist/` on pushes to `main`, or when manually run on the default branch. If your default branch has another name, update its `push.branches` setting. Both workflows share the `pages` concurrency group to serialize deployments. The `github-pages` environment must allow deployment from your default branch.
+
+Daily collection deploys in its own workflow because commits made using `GITHUB_TOKEN` do not trigger another push workflow. The published artifact contains only the generated website and contribution history, not the repository or API key.
 
 ## Data interpretation
 

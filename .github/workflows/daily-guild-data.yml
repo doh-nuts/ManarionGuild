@@ -4,12 +4,19 @@ on:
     - cron: '15 4 * * *'
   workflow_dispatch:
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
 concurrency:
-  group: guild-data
+  # Serialize with static.yml so daily and push deployments cannot overlap.
+  group: pages
   cancel-in-progress: false
 jobs:
   collect:
+    if: github.ref_name == github.event.repository.default_branch
+    permissions:
+      contents: write
+      pages: read
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -33,3 +40,24 @@ jobs:
             git commit -m 'Record daily guild snapshot'
             git push
           fi
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Upload refreshed website
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
+
+  # Bot commits do not trigger push workflows; deploy this run's fresh build directly.
+  deploy:
+    needs: collect
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
