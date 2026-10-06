@@ -1,9 +1,8 @@
-import { series, timestamp, formatNumber, contributionOptions, guildTotals } from './model.js';
+import { series, timestamp, formatNumber, contributionOptions } from './model.js';
 const $ = id => document.getElementById(id);
 const colors = ['#74e3bf','#a7a0ff','#efbf70','#6bb9f5','#f48da7','#cfdd80','#c394e8','#74d9e2'];
 const compact = formatNumber;
 const full = formatNumber;
-const small = n => new Intl.NumberFormat('en', { maximumFractionDigits: 2 }).format(n);
 const svgNS = 'http://www.w3.org/2000/svg';
 function svg(tag, attrs, text) { const node = document.createElementNS(svgNS, tag); for (const [k,v] of Object.entries(attrs)) node.setAttribute(k,v); if (text !== undefined) node.textContent = text; return node; }
 try {
@@ -14,32 +13,18 @@ try {
   const latest = snapshots.at(-1), names = new Map();
   for (const s of snapshots) for (const [id, m] of Object.entries(s.members)) names.set(id, m.name);
   const ids = [...names.keys()].sort((a,b) => names.get(a).localeCompare(names.get(b)));
-  const selected = new Set(ids.filter(id => latest.members[id]));
-  let mode = 'daily';
-  const visibleMember = id => !$('hide-former').checked || Boolean(latest.members[id]);
+  const selected = new Set(ids.filter(id => latest.members[id]).sort((a,b) => (latest.members[b].contributions['1'] || 0) - (latest.members[a].contributions['1'] || 0)).slice(0,5));
+  let mode = 'cumulative';
   $('guild-info').textContent = `${latest.name} · ${snapshots[0].time.slice(0,10)} — ${latest.time.slice(0,10)}`;
   $('updated').textContent = latest.time.replace('T',' · ');
-  for (const [id,value] of Object.entries({ snapshots: snapshots.length, members: Object.keys(latest.members).length, level: latest.level, dungeon: latest.dungeon })) $(id).textContent = small(value);
+  for (const [id,value] of Object.entries({ snapshots: snapshots.length, members: Object.keys(latest.members).length, level: latest.level, dungeon: latest.dungeon })) $(id).textContent = full(value);
   const resourceIds = new Set(snapshots.flatMap(s => Object.values(s.members).flatMap(m => Object.keys(m.contributions))));
   for (const id of contributionOptions(resourceIds)) { const option = document.createElement('option'); option.value=id; option.textContent=resources[id] || `Resource ${id}`; $('resource').append(option); }
-  $('totals-period').textContent = snapshots.length > 1
-    ? `Latest interval: ${snapshots.at(-2).time.replace('T', ' ')} → ${latest.time.replace('T', ' ')}`
-    : 'One snapshot recorded; per-day rates are not yet available.';
-  for (const resource of contributionOptions(resourceIds)) {
-    const totals = guildTotals(snapshots, resource);
-    const row = document.createElement('tr');
-    for (const text of [resources[resource] || `Resource ${resource}`, totals.daily === null ? '—' : formatNumber(totals.daily), formatNumber(totals.lifetime)]) {
-      const cell = document.createElement('td'); cell.textContent = text; row.append(cell);
-    }
-    row.children[1].title = `${totals.dailyMembers} members with a valid rate in the latest interval`;
-    $('guild-totals').append(row);
-  }
   $('from').value = snapshots[0].time.slice(0,10); $('to').value = latest.time.slice(0,10);
   for (const id of ['from','to']) { $(id).min = snapshots[0].time.slice(0,10); $(id).max = latest.time.slice(0,10); }
   function members() {
     $('member-list').replaceChildren();
     for (const [index,id] of ids.entries()) {
-      if (!visibleMember(id)) continue;
       if (!names.get(id).toLowerCase().includes($('search').value.toLowerCase())) continue;
       const label = document.createElement('label'); label.className='member';
       const input = document.createElement('input'); input.type='checkbox'; input.checked=selected.has(id); input.addEventListener('change', () => { input.checked ? selected.add(id) : selected.delete(id); render(); });
@@ -50,22 +35,21 @@ try {
     }
   }
   function render() {
-    const plottedMembers = [...selected].filter(visibleMember);
-    $('selected-count').textContent=`${plottedMembers.length} selected`;
+    $('selected-count').textContent=`${selected.size} selected`;
     $('cumulative').setAttribute('aria-pressed', mode==='cumulative'); $('daily').setAttribute('aria-pressed',mode==='daily');
     const resource=$('resource').value, label=resources[resource] || `Resource ${resource}`;
     $('chart-title').textContent=label; $('unit').textContent=mode==='daily' ? 'Average contribution / day' : 'Lifetime contribution total';
     $('value-label').textContent=mode==='daily' ? 'Latest per day' : 'Latest cumulative';
     $('method').textContent=mode==='daily' ? 'Per day = change between consecutive snapshots ÷ elapsed days. Gaps are interval averages, not exact daily activity. A missing member or a counter decrease breaks the line.' : 'Cumulative shows the lifetime totals recorded by the API. Missing members break the line. The table uses the latest available observation in this range.';
     const indices=snapshots.map((s,i)=>i).filter(i => snapshots[i].time.slice(0,10)>=$('from').value && snapshots[i].time.slice(0,10)<=$('to').value);
-    const lines=plottedMembers.map(id=>({ id, color:colors[ids.indexOf(id)%colors.length], values:series(snapshots,id,resource,mode) }));
+    const lines=[...selected].map(id=>({ id, color:colors[ids.indexOf(id)%colors.length], values:series(snapshots,id,resource,mode) }));
     $('chart').replaceChildren(); $('ranking').replaceChildren();
     const values=lines.flatMap(l=>indices.map(i=>l.values[i])).filter(v=>v!==null && Number.isFinite(v));
     if (!indices.length || !values.length) { const p=document.createElement('p'); p.className='empty'; p.textContent=!indices.length ? 'No snapshots in this date range.' : 'Select members with observations to compare contributions.'; $('chart').append(p); return; }
     const width=960, height=360, left=76, right=24, top=24, bottom=50;
     const first=timestamp(snapshots[indices[0]]), last=timestamp(snapshots[indices.at(-1)]), max=Math.max(...values,1)*1.08;
     const x=i=>left+(timestamp(snapshots[i])-first)/(last-first || 1)*(width-left-right), y=v=>height-bottom-v/max*(height-top-bottom);
-    const chart=svg('svg',{viewBox:`0 0 ${width} ${height}`,role:'img','aria-label':`${label} ${mode} history for ${plottedMembers.length} selected members`});
+    const chart=svg('svg',{viewBox:`0 0 ${width} ${height}`,role:'img','aria-label':`${label} ${mode} history for ${selected.size} selected members`});
     for (let tick=0;tick<=4;tick++) { const v=max*tick/4; chart.append(svg('line',{x1:left,x2:width-right,y1:y(v),y2:y(v),stroke:'#293441','stroke-dasharray':'3 5'}),svg('text',{x:left-12,y:y(v)+4,'text-anchor':'end',fill:'#92a1b3','font-size':12},compact(v))); }
     for (const i of [...new Set([indices[0],indices[Math.floor((indices.length-1)/2)],indices.at(-1)])]) chart.append(svg('text',{x:x(i),y:height-15,'text-anchor':i===indices[0]?'start':i===indices.at(-1)?'end':'middle',fill:'#92a1b3','font-size':12},snapshots[i].time.slice(0,10)));
     for (const line of lines) {
@@ -79,8 +63,7 @@ try {
     for (const row of rows) { const tr=document.createElement('tr'), name=document.createElement('td'), value=document.createElement('td'), date=document.createElement('td'); name.textContent=names.get(row.id); name.style.color=row.color; value.textContent=row.i===undefined?'—':full(row.values[row.i]); date.textContent=row.i===undefined?'No observation':snapshots[row.i].time.replace('T',' '); tr.append(name,value,date); $('ranking').append(tr); }
   }
   $('search').addEventListener('input',members);
-  $('hide-former').addEventListener('change',()=>{ members(); render(); });
-  $('all').onclick=()=>{ ids.filter(visibleMember).forEach(id=>selected.add(id)); members(); render(); };
+  $('all').onclick=()=>{ ids.forEach(id=>selected.add(id)); members(); render(); };
   $('none').onclick=()=>{ selected.clear(); members(); render(); };
   $('cumulative').onclick=()=>{mode='cumulative';render();}; $('daily').onclick=()=>{mode='daily';render();};
   for(const id of ['resource','from','to']) $(id).addEventListener('change',render);
