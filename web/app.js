@@ -1,4 +1,4 @@
-import { series, timestamp, formatNumber, contributionOptions, guildTotals } from './model.js';
+import { series, timestamp, formatNumber, contributionOptions, guildTotals, upgradeSeries } from './model.js';
 const $ = id => document.getElementById(id);
 const colors = ['#74e3bf','#a7a0ff','#efbf70','#6bb9f5','#f48da7','#cfdd80','#c394e8','#74d9e2'];
 const compact = formatNumber;
@@ -9,7 +9,23 @@ function svg(tag, attrs, text) { const node = document.createElementNS(svgNS, ta
 try {
   const response = await fetch('data.json');
   if (!response.ok) throw new Error('History unavailable');
-  const { snapshots, resources } = await response.json();
+  const { snapshots, resources, upgradeNames } = await response.json();
+  let activeTab = 'contributions';
+  const upgradeMetrics = new Map([['level', 'Guild Level'], ['dungeon', 'Dungeon Level']]);
+  const upgradeIds = [...new Set(snapshots.flatMap(snapshot => Object.keys(snapshot.upgrades || {})))].sort((a,b) => Number(a)-Number(b));
+  for (const id of upgradeIds) upgradeMetrics.set(`upgrade:${id}`, upgradeNames?.[id] || `Upgrade ${id}`);
+  const selectedUpgrades = new Set(upgradeMetrics.keys());
+  function upgradeControls() {
+    $('upgrade-list').replaceChildren();
+    for (const [index, [key, name]] of [...upgradeMetrics].entries()) {
+      const label = document.createElement('label'); label.className = 'member';
+      const input = document.createElement('input'); input.type = 'checkbox'; input.checked = selectedUpgrades.has(key);
+      input.onchange = () => { input.checked ? selectedUpgrades.add(key) : selectedUpgrades.delete(key); render(); };
+      const swatch = document.createElement('span'); swatch.className = 'swatch'; swatch.style.background = colors[index % colors.length];
+      const text = document.createElement('span'); text.textContent = name;
+      label.append(input, swatch, text); $('upgrade-list').append(label);
+    }
+  }
   resources.gathered = 'Fish + Wood + Iron';
   const latest = snapshots.at(-1), names = new Map();
   for (const s of snapshots) for (const [id, m] of Object.entries(s.members)) names.set(id, m.name);
@@ -50,33 +66,36 @@ try {
     }
   }
   function render() {
+    const upgrades = activeTab === 'upgrades';
     const plottedMembers = [...selected].filter(visibleMember);
     $('selected-count').textContent=`${plottedMembers.length} selected`;
     $('cumulative').setAttribute('aria-pressed', mode==='cumulative'); $('daily').setAttribute('aria-pressed',mode==='daily');
-    const resource=$('resource').value, label=resources[resource] || `Resource ${resource}`;
-    $('chart-title').textContent=label; $('unit').textContent=mode==='daily' ? 'Average contribution / day' : 'Lifetime contribution total';
-    $('value-label').textContent=mode==='daily' ? 'Latest per day' : 'Latest cumulative';
-    $('method').textContent=mode==='daily' ? 'Per day = change between consecutive snapshots ÷ elapsed days. Gaps are interval averages, not exact daily activity. A missing member or a counter decrease breaks the line.' : 'Cumulative shows the lifetime totals recorded by the API. Missing members break the line. The table uses the latest available observation in this range.';
+    const resource=$('resource').value, label=upgrades ? 'Guild upgrade history' : resources[resource] || `Resource ${resource}`;
+    $('chart-title').textContent=label; $('unit').textContent=upgrades ? 'Recorded level' : mode==='daily' ? 'Average contribution / day' : 'Lifetime contribution total';
+    $('value-label').textContent=upgrades ? 'Latest level' : mode==='daily' ? 'Latest per day' : 'Latest cumulative';
+    $('series-label').textContent=upgrades ? 'Upgrade' : 'Member';
+    $('method').textContent=upgrades ? 'Building levels, dungeon level and guild level at each snapshot. Missing observations break the line. All series share the same scale.' : mode==='daily' ? 'Per day = change between consecutive snapshots ÷ elapsed days. Gaps are interval averages, not exact daily activity. A missing member or a counter decrease breaks the line.' : 'Cumulative shows the lifetime totals recorded by the API. Missing members break the line. The table uses the latest available observation in this range.';
     const indices=snapshots.map((s,i)=>i).filter(i => snapshots[i].time.slice(0,10)>=$('from').value && snapshots[i].time.slice(0,10)<=$('to').value);
-    const lines=plottedMembers.map(id=>({ id, color:colors[ids.indexOf(id)%colors.length], values:series(snapshots,id,resource,mode) }));
+    const lines=upgrades ? [...selectedUpgrades].map(id=>({ id, color:colors[[...upgradeMetrics.keys()].indexOf(id)%colors.length], values:upgradeSeries(snapshots,id) })) : plottedMembers.map(id=>({ id, color:colors[ids.indexOf(id)%colors.length], values:series(snapshots,id,resource,mode) }));
+    const displayName = id => upgrades ? upgradeMetrics.get(id) : names.get(id);
     $('chart').replaceChildren(); $('ranking').replaceChildren();
     const values=lines.flatMap(l=>indices.map(i=>l.values[i])).filter(v=>v!==null && Number.isFinite(v));
-    if (!indices.length || !values.length) { const p=document.createElement('p'); p.className='empty'; p.textContent=!indices.length ? 'No snapshots in this date range.' : 'Select members with observations to compare contributions.'; $('chart').append(p); return; }
+    if (!indices.length || !values.length) { const p=document.createElement('p'); p.className='empty'; p.textContent=!indices.length ? 'No snapshots in this date range.' : upgrades ? 'Select upgrades with observations to graph.' : 'Select members with observations to compare contributions.'; $('chart').append(p); return; }
     const width=960, height=360, left=76, right=24, top=24, bottom=50;
     const first=timestamp(snapshots[indices[0]]), last=timestamp(snapshots[indices.at(-1)]), max=Math.max(...values,1)*1.08;
     const x=i=>left+(timestamp(snapshots[i])-first)/(last-first || 1)*(width-left-right), y=v=>height-bottom-v/max*(height-top-bottom);
-    const chart=svg('svg',{viewBox:`0 0 ${width} ${height}`,role:'img','aria-label':`${label} ${mode} history for ${plottedMembers.length} selected members`});
+    const chart=svg('svg',{viewBox:`0 0 ${width} ${height}`,role:'img','aria-label':upgrades ? `Guild upgrade history for ${lines.length} selected series` : `${label} ${mode} history for ${plottedMembers.length} selected members`});
     for (let tick=0;tick<=4;tick++) { const v=max*tick/4; chart.append(svg('line',{x1:left,x2:width-right,y1:y(v),y2:y(v),stroke:'#293441','stroke-dasharray':'3 5'}),svg('text',{x:left-12,y:y(v)+4,'text-anchor':'end',fill:'#92a1b3','font-size':12},compact(v))); }
     for (const i of [...new Set([indices[0],indices[Math.floor((indices.length-1)/2)],indices.at(-1)])]) chart.append(svg('text',{x:x(i),y:height-15,'text-anchor':i===indices[0]?'start':i===indices.at(-1)?'end':'middle',fill:'#92a1b3','font-size':12},snapshots[i].time.slice(0,10)));
     for (const line of lines) {
       let path='', open=false;
       for (const i of indices) { const value=line.values[i]; if(value===null || !Number.isFinite(value)) { open=false; continue; } path+=`${open?'L':'M'}${x(i)},${y(value)} `; open=true; }
       chart.append(svg('path',{d:path,stroke:line.color,'stroke-width':2.5,fill:'none','stroke-linejoin':'round'}));
-      for (const i of indices) if (line.values[i]!==null && Number.isFinite(line.values[i])) { const point=svg('circle',{cx:x(i),cy:y(line.values[i]),r:3,fill:line.color,tabindex:0}); point.append(svg('title',{},`${names.get(line.id)} · ${snapshots[i].time.replace('T',' ')} · ${full(line.values[i])}${mode==='daily'?' / day':''}`)); chart.append(point); }
+      for (const i of indices) if (line.values[i]!==null && Number.isFinite(line.values[i])) { const point=svg('circle',{cx:x(i),cy:y(line.values[i]),r:3,fill:line.color,tabindex:0}); point.append(svg('title',{},`${displayName(line.id)} · ${snapshots[i].time.replace('T',' ')} · ${full(line.values[i])}${!upgrades && mode==='daily'?' / day':''}`)); chart.append(point); }
     }
     $('chart').append(chart);
     const rows=lines.map(l=>({ ...l, i:indices.findLast(i=>l.values[i]!==null) })).sort((a,b)=>(b.values[b.i] ?? -1)-(a.values[a.i] ?? -1));
-    for (const row of rows) { const tr=document.createElement('tr'), name=document.createElement('td'), value=document.createElement('td'), date=document.createElement('td'); name.textContent=names.get(row.id); name.style.color=row.color; value.textContent=row.i===undefined?'—':full(row.values[row.i]); date.textContent=row.i===undefined?'No observation':snapshots[row.i].time.replace('T',' '); tr.append(name,value,date); $('ranking').append(tr); }
+    for (const row of rows) { const tr=document.createElement('tr'), name=document.createElement('td'), value=document.createElement('td'), date=document.createElement('td'); name.textContent=displayName(row.id); name.style.color=row.color; value.textContent=row.i===undefined?'—':full(row.values[row.i]); date.textContent=row.i===undefined?'No observation':snapshots[row.i].time.replace('T',' '); tr.append(name,value,date); $('ranking').append(tr); }
   }
   $('search').addEventListener('input',members);
   $('hide-former').addEventListener('change',()=>{ members(); render(); });
@@ -85,5 +104,27 @@ try {
   $('cumulative').onclick=()=>{mode='cumulative';render();}; $('daily').onclick=()=>{mode='daily';render();};
   for(const id of ['resource','from','to']) $(id).addEventListener('change',render);
   $('reset').onclick=()=>{$('from').value=snapshots[0].time.slice(0,10);$('to').value=latest.time.slice(0,10);render();};
-  members(); render();
+  function switchTab(tab) {
+    activeTab = tab;
+    const upgrades = tab === 'upgrades';
+    $('member-controls').hidden = upgrades; $('upgrade-controls').hidden = !upgrades;
+    $('contribution-controls').hidden = upgrades; document.querySelector('.guild-totals').hidden = upgrades;
+    for (const id of ['contributions', 'upgrades']) {
+      const button = $(`tab-${id}`); button.setAttribute('aria-selected', id === tab); button.tabIndex = id === tab ? 0 : -1;
+    }
+    $('history-panel').setAttribute('aria-labelledby', `tab-${tab}`);
+    render();
+  }
+  for (const tab of ['contributions', 'upgrades']) {
+    $(`tab-${tab}`).onclick = () => switchTab(tab);
+    $(`tab-${tab}`).onkeydown = event => {
+      if (!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
+      event.preventDefault();
+      const next = event.key === 'Home' ? 'contributions' : event.key === 'End' ? 'upgrades' : activeTab === 'contributions' ? 'upgrades' : 'contributions';
+      switchTab(next); $(`tab-${next}`).focus();
+    };
+  }
+  $('upgrades-all').onclick = () => { for (const key of upgradeMetrics.keys()) selectedUpgrades.add(key); upgradeControls(); render(); };
+  $('upgrades-none').onclick = () => { selectedUpgrades.clear(); upgradeControls(); render(); };
+  upgradeControls(); members(); render();
 } catch { $('error').hidden=false; $('error').textContent='Could not load guild history. Build the website and serve it over HTTP, then reload.'; $('guild-info').textContent='History unavailable'; }

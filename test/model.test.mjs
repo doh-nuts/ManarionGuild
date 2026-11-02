@@ -1,7 +1,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { series, formatNumber, contributionOptions, guildTotals } from '../web/model.js';
+import { series, formatNumber, contributionOptions, guildTotals, upgradeSeries } from '../web/model.js';
 const snapshot = (time, value) => ({time, members: value===null ? {} : {a:{contributions:{1:value}}}});
+test('upgrade graphs read building levels and guild metrics without inventing missing values',()=>{
+  const data=[{level:10,dungeon:20,upgrades:{3:0,6:7,10:1}},{level:11,dungeon:21,upgrades:{3:2,10:2}},{level:12}];
+  assert.deepEqual(upgradeSeries(data,'upgrade:3'),[0,2,null]);
+  assert.deepEqual(upgradeSeries(data,'upgrade:6'),[7,null,null]);
+  assert.deepEqual(upgradeSeries(data,'level'),[10,11,12]);
+  assert.deepEqual(upgradeSeries(data,'dungeon'),[20,21,null]);
+  assert.deepEqual(upgradeSeries(data,'upgrade:10'),[1,2,null]);
+});
 test('guild totals retain former members and use only valid latest-interval rates',()=>{
   const data = [
     {time:'2026-01-01T00:00:00',members:{a:{contributions:{1:100}},b:{contributions:{1:200}},c:{contributions:{1:500}}}},

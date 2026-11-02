@@ -1,5 +1,11 @@
 // Interpret filename timestamps on a neutral UTC clock so browser locale/DST cannot alter intervals.
 export const timestamp = snapshot => Date.parse(snapshot.time + 'Z');
+export function upgradeSeries(snapshots, key) {
+  return snapshots.map(snapshot => {
+    const value = key.startsWith('upgrade:') ? snapshot.upgrades?.[key.slice(8)] : snapshot[key];
+    return typeof value === 'number' && Number.isFinite(value) ? value : null;
+  });
+}
 export function formatNumber(value) {
   if (!Number.isFinite(value)) return '—';
   if (value === 0) return '0';
